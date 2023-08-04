@@ -79,8 +79,8 @@ jobs:
       fail-fast: false
       matrix:
         java: ['8', '11']
-        scala: ['2.12.14', '2.13.6', '3.2.2']
-        platform: ['JVM', 'JS']
+        scala: ['2.12.18', '2.13.11', '3.3.0']
+        platform: ['JVM', 'JS', 'Native']
     steps:
       - name: Checkout current branch
         uses: actions/checkout@v3.3.0

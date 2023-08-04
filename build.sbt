@@ -1,6 +1,7 @@
-import BuildHelper._
+import BuildHelper.*
 import explicitdeps.ExplicitDepsPlugin.autoImport.moduleFilterRemoveValue
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
+import scala.scalanative.build._
 
 inThisBuild(
   List(
@@ -17,6 +18,8 @@ inThisBuild(
     )
   )
 )
+
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
 addCommandAlias("check", "; scalafmtSbtCheck; scalafmtCheckAll")
 addCommandAlias("fmt", "all scalafmtSbt scalafmtAll")
@@ -35,7 +38,7 @@ addCommandAlias(
 
 addCommandAlias("testJS", "zioJsonJS/test")
 
-val zioVersion = "2.0.12"
+val zioVersion = "2.0.15"
 
 lazy val zioJsonRoot = project
   .in(file("."))
@@ -60,12 +63,21 @@ lazy val zioJsonRoot = project
 
 val circeVersion = "0.14.3"
 
-lazy val zioJson = crossProject(JSPlatform, JVMPlatform)
+lazy val zioJson = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("zio-json"))
   .settings(stdSettings("zio-json"))
   .settings(crossProjectSettings)
   .settings(buildInfoSettings("zio.json"))
   .enablePlugins(NeoJmhPlugin)
+  .jvmSettings(
+    libraryDependencies ++=
+      Seq(
+        "io.circe"                              %%% "circe-generic-extras"  % circeVersion % "test",
+        "com.typesafe.play"                     %%% "play-json"             % "2.9.4"      % "test",
+        "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core"   % "2.23.2"     % "test",
+        "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.2"     % "test"
+      )
+  )
   .settings(
     scalacOptions -= "-Xfatal-warnings", // not quite ready.
 
@@ -81,7 +93,7 @@ lazy val zioJson = crossProject(JSPlatform, JVMPlatform)
     libraryDependencies ++= Seq(
       "dev.zio"                %%% "zio"                     % zioVersion,
       "dev.zio"                %%% "zio-streams"             % zioVersion,
-      "org.scala-lang.modules" %%% "scala-collection-compat" % "2.9.0",
+      "org.scala-lang.modules" %%% "scala-collection-compat" % "2.11.0",
       "dev.zio"                %%% "zio-test"                % zioVersion   % "test",
       "dev.zio"                %%% "zio-test-sbt"            % zioVersion   % "test",
       "io.circe"               %%% "circe-core"              % circeVersion % "test",
@@ -98,12 +110,8 @@ lazy val zioJson = crossProject(JSPlatform, JVMPlatform)
 
         case _ =>
           Vector(
-            "org.scala-lang"                          % "scala-reflect"         % scalaVersion.value % Provided,
-            "com.softwaremill.magnolia1_2"          %%% "magnolia"              % "1.1.3",
-            "io.circe"                              %%% "circe-generic-extras"  % circeVersion       % "test",
-            "com.typesafe.play"                     %%% "play-json"             % "2.9.4"            % "test",
-            "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core"   % "2.23.2"           % "test",
-            "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.23.2"           % "test"
+            "org.scala-lang"                 % "scala-reflect" % scalaVersion.value % Provided,
+            "com.softwaremill.magnolia1_2" %%% "magnolia"      % "1.1.3"
           )
       }
     },
@@ -226,6 +234,8 @@ lazy val zioJsonJS = zioJson.js
 
 lazy val zioJsonJVM = zioJson.jvm
 
+lazy val zioJsonNative = zioJson.native
+
 lazy val zioJsonGolden = project
   .in(file("zio-json-golden"))
   .settings(stdSettings("zio-json-golden"))
@@ -258,7 +268,7 @@ lazy val zioJsonYaml = project
   .dependsOn(zioJsonJVM)
   .enablePlugins(BuildInfoPlugin)
 
-lazy val zioJsonMacros = crossProject(JSPlatform, JVMPlatform)
+lazy val zioJsonMacros = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   .in(file("zio-json-macros"))
   .settings(stdSettings("zio-json-macros"))
   .settings(crossProjectSettings)
